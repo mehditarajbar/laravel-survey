@@ -104,6 +104,30 @@ const store = createStore({
         updated_at: "2023-09-20 18:00:00",
         expire_date: "2023-10-22 19:00:00",
         questions: []
+      },
+      {
+        id: 300,
+        title: "Laravel  ",
+        slug: "laravel-test",
+        status: "active",
+        image: "test",
+        description: "description testttttt larave",
+        created_at: "2023-09-20 18:00:00",
+        updated_at: "2023-09-20 18:00:00",
+        expire_date: "2023-10-22 19:00:00",
+        questions: []
+      },
+      {
+        id: 400,
+        title: "Laravel  ",
+        slug: "laravel-test",
+        status: "active",
+        image: "test",
+        description: "description testttttt larave",
+        created_at: "2023-09-20 18:00:00",
+        updated_at: "2023-09-20 18:00:00",
+        expire_date: "2023-10-22 19:00:00",
+        questions: []
       }
 
 
