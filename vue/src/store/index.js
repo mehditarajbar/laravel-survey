@@ -2,14 +2,13 @@ import {createStore} from "vuex";
 import axiosClient from "../axios.js";
 
 
-
 const store = createStore({
   state: {
     user: {
       data: {},
       token: sessionStorage.getItem("TOKEN"),
     },
-    surveys:[
+    surveys: [
       {
         id: 100,
         title: "Technology test",
@@ -82,20 +81,24 @@ const store = createStore({
             type: "text",
             question: "Text Questions?",
             description: null,
-            data: {}
+            data: {
+              options: []
+            }
           },
           {
             id: 6,
             type: "textarea",
             question: "Textarea Questions?",
             description: "not null text area",
-            data: {}
+            data: {
+              options: []
+            }
           },
         ],
       },
       {
         id: 200,
-        title: "Laravel  ",
+        title: "Laravel 1 ",
         slug: "laravel-test",
         status: "active",
         image: "test",
@@ -107,7 +110,7 @@ const store = createStore({
       },
       {
         id: 300,
-        title: "Laravel  ",
+        title: "Laravel 2 ",
         slug: "laravel-test",
         status: "active",
         image: "test",
@@ -119,7 +122,7 @@ const store = createStore({
       },
       {
         id: 400,
-        title: "Laravel  ",
+        title: "Laravel  3",
         slug: "laravel-test",
         status: "active",
         image: "test",
@@ -131,7 +134,8 @@ const store = createStore({
       }
 
 
-    ]
+    ],
+    questionTypes: ['text', 'select', 'radio', 'checkbox', 'textarea']
   },
   getters: {},
   actions: {
@@ -156,7 +160,26 @@ const store = createStore({
           commit('logout')
           return response;
         })
-    }
+    },
+    saveSurvey({commit}, survey) {
+      let response;
+      if (survey.id) {
+        response = axiosClient
+          .put(`/surveys/${survey.id}`, survey)
+          .then((res) => {
+            commit('updateSurvey', res.data);
+            return res;
+          });
+      } else {
+        response = axiosClient
+          .post('/surveys', survey)
+          .then((res) => {
+            commit('saveSurvey', res.data);
+            return res;
+          })
+      }
+      return response;
+    },
   },
 
   mutations: {
@@ -169,8 +192,18 @@ const store = createStore({
       state.user.token = userData.token;
       state.user.data = userData.user;
       sessionStorage.setItem('TOKEN', userData.token);
-    }
-
+    },
+    saveSurvey: (state, survey) => {
+      state.surveys = [...state.surveys, survey.data];
+    },
+    updateSurvey: (state, survey) => {
+      state.surveys =state.surveys.map((s)=>{
+        if (s.id==survey.data.id){
+          return survey.data;
+        }
+        return s;
+      });
+    },
   },
   modules: {}
 })
