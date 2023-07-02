@@ -2,26 +2,35 @@
 import PageComponent from "../components/PageComponent.vue";
 import QuestionEditor from "../components/editor/QuestionEditor.vue";
 
-import {ref} from "vue";
+import { ref, watch } from "vue";
 import store from "../store/index.js";
-import {useRoute,useRouter} from "vue-router";
-import {v4 as uuidv4} from "uuid";
+import { useRoute, useRouter } from "vue-router";
+import { v4 as uuidv4 } from "uuid";
 
 const route = useRoute();
-const router=useRouter();
+const router = useRouter();
 
 let model = ref({
   title: "",
   status: false,
   description: null,
-  image: null,
+  image_url: null,
   expire_date: null,
   questions: []
-})
+});
+
+watch(
+  () => store.state.currentSurvey.data,
+  (newVal, oldVal) => {
+    model.value = {
+        ...JSON.parse(JSON.stringify(newVal)),
+        status:newVal.status!=="draft",
+    }
+  }
+);
+
 if (route.params.id) {
-  model.value = store.state.surveys.find(
-    (s) => s.id === parseInt(route.params.id)
-  )
+  store.dispatch('getSurvey', route.params.id)
 }
 
 function addQuestion(index) {
@@ -52,14 +61,25 @@ function changeQuestion(question) {
   );
 }
 
-function saveSurvey(){
-  store.dispatch('saveSurvey',model.value)
-    .then(({data})=>{
-    router.push({
-      name:'SurveyView',
-      params:{id:data.data.id}
+function saveSurvey() {
+  store.dispatch('saveSurvey', model.value)
+    .then(({ data }) => {
+      router.push({
+        name: 'SurveyView',
+        params: { id: data.data.id }
+      })
     })
-  })
+}
+
+function onImageChose(ev) {
+  console.log(ev);
+  const file = ev.target.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    model.value.image = reader.result;
+    model.value.image_url = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 </script>
@@ -83,15 +103,8 @@ function saveSurvey(){
               Image
             </label>
             <div class="mt-1 flex items-center">
-              <img
-                v-if="model.image"
-                :src="model.image"
-                :alt="model.title"
-                class="w-64 h-48 object-cover"
-              />
-              <span
-                v-else
-                class="flex
+              <img v-if="model.image_url" :src="model.image_url" :alt="model.title" class="w-64 h-48 object-cover" />
+              <span v-else class="flex
                     items-center
                     justify-center
                     h-12
@@ -99,17 +112,14 @@ function saveSurvey(){
                     rounded-full
                     overflow-hidden
                     bg-gray-100
-                  "
-              >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                       stroke="currentColor" class="h-[80%] w-[80%] text-gray-300">
-  <path stroke-linecap="round" stroke-linejoin="round"
-        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
-</svg>
-                </span>
-              <button
-                type="button"
-                class="
+                  ">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                  stroke="currentColor" class="h-[80%] w-[80%] text-gray-300">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+              </span>
+              <button type="button" class="
                     relative
                     overflow-hidden
                     ml-5
@@ -129,38 +139,26 @@ function saveSurvey(){
                     focus:ring-offset-2
                     focus:ring-indigo-500
 
-                  "
-              >
-                <input
-                  type="file"
-                  class="absolute
+                  ">
+                <input type="file" @change="onImageChose" class="absolute
                           left-0
                           right-0
                           top-0
                           bottom-0
                           opacity-0
                           cursor-pointer
-                    "
-                >
-                Change
+                    ">
+                Changed
               </button>
             </div>
           </div>
           <!--        /Image-->
           <!--         Title-->
           <div>
-            <label for="title"
-                   class="block text-sm font-medium text-gray-700"
-            >
+            <label for="title" class="block text-sm font-medium text-gray-700">
               Title
             </label>
-            <input
-              type="text"
-              name="title"
-              id="title"
-              v-model="model.title"
-              autocomplete="survey_title"
-              class="
+            <input type="text" name="title" id="title" v-model="model.title" autocomplete="survey_title" class="
                   mt-1
                   focus:ring-indigo-500 focus:border-indigo-500
                   block
@@ -169,9 +167,7 @@ function saveSurvey(){
                   sm:text-sm
                   border-gray-300
                   rounded-md
-                "
-              placeholder="Title Your Survey"
-            >
+                " placeholder="Title Your Survey">
           </div>
           <!--        /Title-->
           <!--         Description-->
@@ -180,13 +176,8 @@ function saveSurvey(){
               Description
             </label>
             <div class="mt-1">
-                <textarea
-                  id="description"
-                  name="description"
-                  rows="3"
-                  v-model="model.description"
-                  autocomplete="survey_description"
-                  class="
+              <textarea id="description" name="description" rows="3" v-model="model.description"
+                autocomplete="survey_description" class="
                   mt-1
                   focus:ring-indigo-500 focus:border-indigo-500
                   block
@@ -195,9 +186,7 @@ function saveSurvey(){
                   sm:text-sm
                   border border-gray-300
                   rounded-md
-                  "
-                  placeholder="Description Your Survey"
-                >
+                  " placeholder="Description Your Survey">
 
                 </textarea>
             </div>
@@ -208,12 +197,7 @@ function saveSurvey(){
             <label for="expire_date" class="lock text-sm font-medium text-gray-700">
               Expire Date
             </label>
-            <input
-              type="date"
-              name="expire_date"
-              id="expire_date"
-              v-model="model.expire_date"
-              class="
+            <input type="date" name="expire_date" id="expire_date" v-model="model.expire_date" class="
                   mt-1
                   focus:ring-indigo-500 focus:border-indigo-500
                   block
@@ -222,19 +206,13 @@ function saveSurvey(){
                   sm:text-sm
                   border-gray-300
                   rounded-md
-                "
-            >
+                ">
           </div>
           <!--       /ExpireDate -->
           <!--       Status -->
           <div class="flex items-start">
             <div class="flex items-center h-5">
-              <input
-                id="status"
-                name="status"
-                type="checkbox"
-                v-model="model.status"
-                class="
+              <input id="status" name="status" type="checkbox" v-model="model.status" class="
                     focus:ring-indigo-500
                     h-4
                     w-4
@@ -242,8 +220,7 @@ function saveSurvey(){
                     border-gray-300
                     rounded
                     cursor-pointer
-                "
-              >
+                ">
             </div>
             <div class="ml-3 text-sm">
               <label for="status" class="lock text-sm font-medium text-gray-700">
@@ -260,10 +237,7 @@ function saveSurvey(){
           <h3 class="text-2xl font-semibold flex items-center justify-between">
             Questions
             <!--              Add new Question-->
-            <button
-              type="button"
-              @click="addQuestion()"
-              class="
+            <button type="button" @click="addQuestion()" class="
                     flex
                     items-center
                     text-sm
@@ -274,11 +248,10 @@ function saveSurvey(){
                     bg-gray-600
                     hover:bg-gray-700
 
-                "
-            >
+                ">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                   stroke="currentColor" class="w-4 h-4 mt-1 inline-block">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                stroke="currentColor" class="w-4 h-4 mt-1 inline-block">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               Add Question
             </button>
@@ -287,14 +260,9 @@ function saveSurvey(){
           <div v-if="!model.questions.length" class="text-center text-gray-600">
             You don't have any questions created
           </div>
-          <div v-for="(question,index) in model.questions" :key="question.id">
-            <QuestionEditor
-              :question="question"
-              :index="index"
-              @change="questionChange"
-              @addQuestion="addQuestion"
-              @deleteQuestion="deleteQuestion"
-            >
+          <div v-for="(question, index) in model.questions" :key="question.id">
+            <QuestionEditor :question="question" :index="index" @change="questionChange" @addQuestion="addQuestion"
+              @deleteQuestion="deleteQuestion">
 
             </QuestionEditor>
           </div>
@@ -303,8 +271,7 @@ function saveSurvey(){
 
         <!--        Submit Button-->
         <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
-          <button type="submit"
-                  class="
+          <button type="submit" class="
                       inline-flex
                       justify-center
                       py-2
@@ -321,8 +288,7 @@ function saveSurvey(){
                       focus:ring-2
                       focus:ring-offset-2
                       focus:ring-indigo-500
-                    "
-          >
+                    ">
             Save
           </button>
         </div>
@@ -333,6 +299,4 @@ function saveSurvey(){
 </template>
 
 
-<style scoped>
-
-</style>
+<style scoped></style>

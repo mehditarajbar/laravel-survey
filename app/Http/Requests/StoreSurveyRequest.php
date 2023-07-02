@@ -29,8 +29,9 @@ class StoreSurveyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'=>['required','string','max:1000'],
             'user_id'=>['required','exists:users,id'],
+            'title'=>['required','string','max:1000'],
+            'image'=>['nullable','string'],
             'status'=>['required','boolean'],
             'description'=>['nullable','string'],
             'expire_date'=>['nullable','date','after:tomorrow']

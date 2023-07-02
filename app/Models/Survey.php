@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
 class Survey extends Model
 {
-    use HasFactory,HasSlug;
+    use HasFactory, HasSlug;
 
-    protected $fillable=['user_id','title','slug','description','status','expire_date'];
+    protected $fillable = ['user_id','image', 'title', 'slug', 'description', 'status', 'expire_date'];
 
     /**
      * @return SlugOptions
@@ -22,4 +24,5 @@ class Survey extends Model
             ->generateSlugsFrom('title')
             ->saveSlugsTo('slug');
     }
+
 }

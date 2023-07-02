@@ -1,4 +1,4 @@
-import {createStore} from "vuex";
+import { createStore } from "vuex";
 import axiosClient from "../axios.js";
 
 
@@ -8,6 +8,11 @@ const store = createStore({
       data: {},
       token: sessionStorage.getItem("TOKEN"),
     },
+    currentSurvey: {
+      loading: false,
+      data: {}
+    }
+    ,
     surveys: [
       {
         id: 100,
@@ -27,10 +32,10 @@ const store = createStore({
             description: null,
             data: {
               options: [
-                {uuid: "f8afa0a-a3qd1-da8d1-qw0d", text: "USA"},
-                {uuid: "f8afa0a-a2qd2-da8d1-qw0d", text: "Georgia"},
-                {uuid: "f8afa0a-a3qd1-fa8d1-q10d", text: "Germany"},
-                {uuid: "f8afa0a-a3fds-fa8d1-q10d", text: "India"}
+                { uuid: "f8afa0a-a3qd1-da8d1-qw0d", text: "USA" },
+                { uuid: "f8afa0a-a2qd2-da8d1-qw0d", text: "Georgia" },
+                { uuid: "f8afa0a-a3qd1-fa8d1-q10d", text: "Germany" },
+                { uuid: "f8afa0a-a3fds-fa8d1-q10d", text: "India" }
               ],
             }
           },
@@ -41,10 +46,10 @@ const store = createStore({
             description: "test desc",
             data: {
               options: [
-                {uuid: "f8afa0a-a3qd1-da8d1-qw0d", text: "JAVASCRIPT"},
-                {uuid: "f81fa0a-a2qd2-da8d1-qw0d", text: "Python"},
-                {uuid: "f83fa0a-a3qd1-fa8d1-q10d", text: "Perl"},
-                {uuid: "f4afa0a-a3fds-fa8d1-q10d", text: "PHP"}
+                { uuid: "f8afa0a-a3qd1-da8d1-qw0d", text: "JAVASCRIPT" },
+                { uuid: "f81fa0a-a2qd2-da8d1-qw0d", text: "Python" },
+                { uuid: "f83fa0a-a3qd1-fa8d1-q10d", text: "Perl" },
+                { uuid: "f4afa0a-a3fds-fa8d1-q10d", text: "PHP" }
               ],
             }
           },
@@ -55,10 +60,10 @@ const store = createStore({
             description: "test id3",
             data: {
               options: [
-                {uuid: "f8af34a-a3qd1-da8d1-qw0d", text: "JAVASCRIPT_id3"},
-                {uuid: "f81f54a-a2qd2-da8d1-qw0d", text: "Python_id3"},
-                {uuid: "f83f603-a3qd1-fa8d1-q10d", text: "Perl_id3"},
-                {uuid: "f4af405-a3fds-fa8d1-q10d", text: "PHP_id3"}
+                { uuid: "f8af34a-a3qd1-da8d1-qw0d", text: "JAVASCRIPT_id3" },
+                { uuid: "f81f54a-a2qd2-da8d1-qw0d", text: "Python_id3" },
+                { uuid: "f83f603-a3qd1-fa8d1-q10d", text: "Perl_id3" },
+                { uuid: "f4af405-a3fds-fa8d1-q10d", text: "PHP_id3" }
               ],
             },
           },
@@ -69,10 +74,10 @@ const store = createStore({
             description: "test radio",
             data: {
               options: [
-                {uuid: "f8af34a-a3qd1-da8d1-qr0d", text: "JAVASCRIPT_radio"},
-                {uuid: "f81f54a-a2qd2-da8d1-qq0d", text: "Python_radio"},
-                {uuid: "f83f603-a3qd1-fa8d1-qaz0d", text: "Perl_radio"},
-                {uuid: "f4af405-a3fds-fa8d1-q1fd", text: "PHP_radio"}
+                { uuid: "f8af34a-a3qd1-da8d1-qr0d", text: "JAVASCRIPT_radio" },
+                { uuid: "f81f54a-a2qd2-da8d1-qq0d", text: "Python_radio" },
+                { uuid: "f83f603-a3qd1-fa8d1-qaz0d", text: "Perl_radio" },
+                { uuid: "f4af405-a3fds-fa8d1-q1fd", text: "PHP_radio" }
               ],
             }
           },
@@ -139,29 +144,30 @@ const store = createStore({
   },
   getters: {},
   actions: {
-    register({commit}, user) {
+    register({ commit }, user) {
       return axiosClient.post('/register', user)
-        .then(({data}) => {
+        .then(({ data }) => {
           commit('setUser', data)
           return data
         })
 
     },
-    login({commit}, user) {
+    login({ commit }, user) {
       return axiosClient.post('/login', user)
-        .then(({data}) => {
+        .then(({ data }) => {
           commit('setUser', data)
           return data
         })
     },
-    logout({commit}) {
+    logout({ commit }) {
       return axiosClient.post('/logout')
         .then(response => {
           commit('logout')
           return response;
         })
     },
-    saveSurvey({commit}, survey) {
+    saveSurvey({ commit }, survey) {
+      delete survey.image_url;
       let response;
       if (survey.id) {
         response = axiosClient
@@ -180,6 +186,20 @@ const store = createStore({
       }
       return response;
     },
+    getSurvey({ commit }, id) {
+      commit('setCurrentSurveyLoading', true);
+      return axiosClient
+        .get(`/surveys/${id}`)
+        .then((res) => {
+          commit('setCurrentSurvey', res.data)
+          commit('setCurrentSurveyLoading', false);
+          return res;
+        })
+        .catch((err) => {
+          commit('setCurrentSurveyLoading', false);
+          throw err;
+        })
+    }
   },
 
   mutations: {
@@ -197,13 +217,19 @@ const store = createStore({
       state.surveys = [...state.surveys, survey.data];
     },
     updateSurvey: (state, survey) => {
-      state.surveys =state.surveys.map((s)=>{
-        if (s.id==survey.data.id){
+      state.surveys = state.surveys.map((s) => {
+        if (s.id == survey.data.id) {
           return survey.data;
         }
         return s;
       });
     },
+    setCurrentSurveyLoading: (state, loading) => {
+      state.currentSurvey.loading=loading;
+    },
+    setCurrentSurvey: (state, survey) => {
+      state.currentSurvey.data=survey.data;
+    }
   },
   modules: {}
 })
