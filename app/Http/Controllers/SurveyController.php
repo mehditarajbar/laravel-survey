@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SurveysQuestionEnum;
+use App\Http\Requests\StoreSurveyAnswerRequest;
 use App\Http\Requests\StoreSurveyRequest;
 use App\Http\Requests\UpdateSurveyRequest;
 use App\Http\Resources\SurveyResource;
+use App\Models\SurveyAnswer;
 use App\Models\Survey;
+use App\Models\SurveyQuestion;
+use App\Models\SurveyQuestionAnswer;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response as ResponseStatusCode;
 
 class SurveyController extends Controller
@@ -20,7 +27,7 @@ class SurveyController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        return SurveyResource::collection(Survey::where('user_id', $user->id)->paginate());
+        return SurveyResource::collection(Survey::where('user_id', $user->id)->paginate(2));
 
     }
 
@@ -35,6 +42,11 @@ class SurveyController extends Controller
         }
         $survey = Survey::create($data);
 
+        //Create New Question
+        foreach ($data['questions'] as $question) {
+            $question['survey_id'] = $survey->id;
+            $this->createQuestion($question);
+        }
         return new SurveyResource($survey);
     }
 
@@ -51,6 +63,40 @@ class SurveyController extends Controller
     }
 
     /**
+     * Display the specified resource.
+     */
+    public function showForGuest(Survey $survey)
+    {
+        return new SurveyResource($survey);
+    }
+
+    public function storeAnswer(StoreSurveyAnswerRequest $request, Survey $survey)
+    {
+        $validated = $request->validated();
+        $surveyAnswer = SurveyAnswer::create([
+            'survey_id' => $survey->id,
+            'start_date' => date('Y-m-d H:i:s'),
+            'end_date' => date('Y-m-d H:i:s'),
+        ]);
+
+        foreach ($validated['answers'] as $questinId => $answer) {
+            $question = SurveyQuestion::where(['id' => $questinId, 'survey_id' => $survey->id])->get();
+            if (!$question) {
+                return response("Invalid question ID : " . $questinId, ResponseStatusCode::HTTP_BAD_REQUEST);
+            }
+
+            $data = [
+                'survey_question_id' => $questinId,
+                'survey_answer_id' => $surveyAnswer->id,
+                'answer' => is_array($answer) ? json_encode($answer) : $answer
+            ];
+            SurveyQuestionAnswer::create($data);
+
+        }
+        return response('',ResponseStatusCode::HTTP_CREATED);
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(UpdateSurveyRequest $request, Survey $survey)
@@ -64,7 +110,31 @@ class SurveyController extends Controller
             }
         }
         $survey->update($data);
+
+        //get Ids as plain array of existing questions
+        $existingIds = $survey->questions()->pluck('id')->toArray();
+        //get New ids
+        $newIds = Arr::pluck($data['questions'], 'id');
+        //find questions to delete
+        $toDelete = array_diff($existingIds, $newIds);
+        $toAdd = array_diff($newIds, $existingIds);
+        SurveyQuestion::destroy($toDelete);
+        foreach ($data['questions'] as $question) {
+            if (in_array($question['id'], $toAdd)) {
+                $question['survey_id'] = $survey->id;
+                $this->createQuestion($question);
+            }
+        }
+
+        $questionMap = collect($data['questions'])->keyBy('id');
+        foreach ($survey->questions as $question) {
+            if (isset($questionMap[$question->id])) {
+                $this->updateQuestion($question, $questionMap[$question->id]);
+            }
+        }
+
         return new SurveyResource($survey);
+
     }
 
     /**
@@ -78,6 +148,9 @@ class SurveyController extends Controller
         }
 
         $survey->delete();
+        if ($survey->image) {
+            File::delete(public_path($survey->image));
+        }
         return response([
             '',
         ], ResponseStatusCode::HTTP_ACCEPTED);
@@ -110,4 +183,36 @@ class SurveyController extends Controller
         return $relativePath;
 
     }
+
+    private function createQuestion($question)
+    {
+        if (is_array($question['data'])) {
+            $question['data'] = json_encode($question['data']);
+        }
+        $validator = Validator::make($question, [
+            'question' => ['required', 'string'],
+            'type' => ['required', Rule::in(SurveysQuestionEnum::getType())],
+            'description' => ['nullable', 'string'],
+            'data' => ['present'],
+            'survey_id' => ['exists:surveys,id']
+        ]);
+
+        return SurveyQuestion::create($validator->validated());
+    }
+
+    private function updateQuestion(SurveyQuestion $question, $data)
+    {
+        if (is_array($data['data'])) {
+            $data['data'] = json_encode($data['data']);
+            $validator = Validator::make($data, [
+                'id' => ['exists:survey_questions,id'],
+                'question' => ['required', 'string'],
+                'type' => ['required', Rule::in(SurveysQuestionEnum::getType())],
+                'description' => ['nullable', 'string'],
+                'data' => ['present']
+            ]);
+            return $question->update($validator->validated());
+        }
+    }
+
 }

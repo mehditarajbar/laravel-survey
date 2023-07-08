@@ -66,6 +66,7 @@
       </DisclosurePanel>
     </Disclosure>
     <router-view></router-view>
+    <Notification/>
   </div>
 </template>
 
@@ -74,6 +75,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuIt
 import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
 import {useStore} from "vuex";
 import {useRouter} from "vue-router";
+import Notification from './Notification.vue';
 
 const navigation = [
   { name: 'Dashboard', to:{name:"Dashboard"}},
