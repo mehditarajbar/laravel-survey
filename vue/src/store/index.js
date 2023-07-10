@@ -8,6 +8,10 @@ const store = createStore({
       data: {},
       token: sessionStorage.getItem("TOKEN"),
     },
+    dashboard: {
+      loading: false,
+      data: {}
+    },
     currentSurvey: {
       loading: false,
       data: {}
@@ -87,30 +91,45 @@ const store = createStore({
       return axiosClient.delete(`/surveys/${id}`);
     },
     getSurveys({ commit }, { url = null } = {}) {
-      url=url||'/surveys'
+      url = url || '/surveys'
       commit('setSurveysLoading', true)
       return axiosClient.get(url).then((res) => {
         commit('setSurveysLoading', false);
         commit("setSurveys", res.data)
       })
     },
-    getSurveyBySlug({commit},slug){
-      commit("setCurrentSurveyLoading",true);
+    getSurveyBySlug({ commit }, slug) {
+      commit("setCurrentSurveyLoading", true);
       return axiosClient
-      .get(`/survey-by-slug/${slug}`)
-      .then((res)=>{
-        commit('setCurrentSurvey',res.data)
-        commit("setCurrentSurveyLoading",false);
-        return res;
-      })
-      .catch((err)=>{
-        commit("setCurrentSurveyLoading",false);
-        throw err
-      });
+        .get(`/survey-by-slug/${slug}`)
+        .then((res) => {
+          commit('setCurrentSurvey', res.data)
+          commit("setCurrentSurveyLoading", false);
+          return res;
+        })
+        .catch((err) => {
+          commit("setCurrentSurveyLoading", false);
+          throw err
+        });
     },
-    saveSurveyAnswer({commit},{surveyId,answers}){
+    saveSurveyAnswer({ commit }, { surveyId, answers }) {
       return axiosClient
-      .post(`/surveys/${surveyId}/answer`,{answers})
+        .post(`/surveys/${surveyId}/answer`, { answers })
+    },
+    getDashboardData({ commit }) {
+      commit('dashboardLoading', true);
+      return axiosClient
+        .get(`/dashboard`)
+        .then((res) => {
+          commit('dashboardLoading', false);
+          commit('setDashboardData', res.data);
+          return res;
+        })
+        .catch(error => {
+          commit('dashboardLoading', false);
+          return error;
+        })
+
     }
 
   },
@@ -148,6 +167,12 @@ const store = createStore({
       }, 3000)
 
     },
+    dashboardLoading: (state, loading) => {
+      state.dashboard.loading = loading;
+    },
+    setDashboardData: (state, data) => {
+      state.dashboard.data = data;
+    }
   },
   modules: {}
 })

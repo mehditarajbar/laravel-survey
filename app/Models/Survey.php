@@ -14,11 +14,19 @@ class Survey extends Model
 {
     use HasFactory, HasSlug;
 
+    protected $casts=[
+        'staus'=>'boolean',
+    ];
     protected $fillable = ['user_id','image', 'title', 'slug', 'description', 'status', 'expire_date'];
 
     public function questions(): HasMany
     {
         return $this->hasMany(SurveyQuestion::class);
+    }
+
+    public function answers(): HasMany
+    {
+        return $this->hasMany(SurveyAnswer::class);
     }
 
     /**

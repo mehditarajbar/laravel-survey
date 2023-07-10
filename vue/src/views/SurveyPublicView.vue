@@ -38,6 +38,7 @@
             </div>
         </form>
     </div>
+    <Notification/>
 </template>
 
 
@@ -46,7 +47,7 @@ import { ref, computed } from "vue";
 import QuestionViewer from "../components/viewer/QuestionViewer.vue";
 import { useRoute } from "vue-router";
 import { useStore } from "vuex";
-
+import Notification from '../components/Notification.vue';
 const route = useRoute();
 const store = useStore();
 const loading = computed(() => store.state.currentSurvey.loading);
@@ -65,7 +66,13 @@ function submitSurvey() {
         if (response.status === 201) {
             surveyFinished.value = true;
         }
-    });
+    }).catch(err=>{
+        
+        store.commit('notify',{
+            type:'error',
+            message:err.response.data.message
+        })
+    })
 }
 
 function submitAnotherResponse() {

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('survey_question_answers', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\SurvayQuestion::class,'survey_question_id');
-            $table->foreignIdFor(\App\Models\SurvayAnswer::class,'survey_answer_id');
+            $table->foreignIdFor(\App\Models\SurveyQuestion::class,'survey_question_id');
+            $table->foreignIdFor(\App\Models\SurveyAnswer::class,'survey_answer_id');
             $table->text('answer');
             $table->timestamps();
         });
